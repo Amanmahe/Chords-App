@@ -73,7 +73,7 @@ const SerialCheck = () => {
   }
 
   return (
-    <>{serialState === "available" ? <DataPass /> : <InCompatibleBrowser />}</>
+    <>{serialState === "available" ? <DataPass /> : <DataPass /> }</>
   );
 };
 
