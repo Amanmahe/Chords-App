@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "./ui/button";
-import { SmoothieChart } from "smoothie";
 import { Input } from "./ui/input";
 import { listen } from "@tauri-apps/api/event";
 import {
@@ -85,7 +84,7 @@ const Connection: React.FC<ConnectionProps> = ({
   const endTimeRef = useRef<number | null>(null); // Ref to store the end time of the recording
   const startTimeRef = useRef<number | null>(null); // Ref to store the start time of the recording
   const bufferRef = useRef<number[][]>([]); // Ref to store the data temporary buffer during recording
-  const portRef = useRef<SerialPort | null>(null); // Ref to store the serial port
+  // const portRef = useRef<SerialPort | null>(null); // Ref to store the serial port
   const indexedDBRef = useRef<IDBDatabase | null>(null);
   const [ifBits, setifBits] = useState<BitSelection>("auto");
   const [showAllChannels, setShowAllChannels] = useState(false);
@@ -181,32 +180,31 @@ const Connection: React.FC<ConnectionProps> = ({
     setCustomTime("");
   };
 
-  const formatPortInfo = useCallback(
-    // Function to format the port info, which includes the board name and product ID in toast message
-    (info: SerialPortInfo) => {
-      if (!info || !info.usbVendorId) {
-        return "Port with no info";
-      }
+  // const formatPortInfo = useCallback(
+  //   // Function to format the port info, which includes the board name and product ID in toast message
+  //   (info: SerialPortInfo) => {
+  //     if (!info || !info.usbVendorId) {
+  //       return "Port with no info";
+  //     }
 
-      // First, check if the board exists in BoardsList
-      const board = BoardsList.find(
-        (b) => parseInt(b.field_pid) === info.usbProductId
-      );
-      if (board) {
-        setifBits(board.bits as BitSelection);
-        setSelectedBits(board.bits as BitSelection);
-        return `${board.name} | Product ID: ${info.usbProductId}`; // Return the board name and product ID
-      }
+  //     // First, check if the board exists in BoardsList
+  //     const board = BoardsList.find(
+  //       (b) => parseInt(b.field_pid) === info.usbProductId
+  //     );
+  //     if (board) {
+  //       setifBits(board.bits as BitSelection);
+  //       setSelectedBits(board.bits as BitSelection);
+  //       return `${board.name} | Product ID: ${info.usbProductId}`; // Return the board name and product ID
+  //     }
 
-      setDetectedBits(null);
-    },
-    []
-  );
+  //     setDetectedBits(null);
+  //   },
+  //   []
+  // );
 
   const handleClick = () => {
     // Function to handle toggle for connect/disconnect button
     if (isConnected) {
-      disconnectDevice();
     } else {
       connectToDevice();
     }
@@ -250,58 +248,57 @@ let previousCounter: number | null = null; // Variable to store the previous cou
       await navigator.wakeLock.request("screen"); // Request the wake lock to keep the screen on
     } catch (error) {
       // If there is an error during connection, disconnect the device
-      disconnectDevice();
       isConnectedRef.current = false;
       setIsConnected(false);
       console.error("Error connecting to device:", error);
     }
   };
   
-  const disconnectDevice = async (): Promise<void> => {
-    try {
-      if (portRef.current) {
-        if (writerRef.current) {
-          const stopMessage = new TextEncoder().encode("STOP\n");
-          try {
-            await writerRef.current.write(stopMessage);
-          } catch (error) {
-            console.error("Failed to send STOP command:", error);
-          }
-          writerRef.current.releaseLock();
-          writerRef.current = null;
-        }
+  // const disconnectDevice = async (): Promise<void> => {
+  //   try {
+  //     if (portRef.current) {
+  //       if (writerRef.current) {
+  //         const stopMessage = new TextEncoder().encode("STOP\n");
+  //         try {
+  //           await writerRef.current.write(stopMessage);
+  //         } catch (error) {
+  //           console.error("Failed to send STOP command:", error);
+  //         }
+  //         writerRef.current.releaseLock();
+  //         writerRef.current = null;
+  //       }
         
-        if (readerRef.current) {
-          try {
-            await readerRef.current.cancel();
-          } catch (error) {
-            console.error("Failed to cancel reader:", error);
-          }
-          readerRef.current.releaseLock();
-          readerRef.current = null;
-        }
+  //       if (readerRef.current) {
+  //         try {
+  //           await readerRef.current.cancel();
+  //         } catch (error) {
+  //           console.error("Failed to cancel reader:", error);
+  //         }
+  //         readerRef.current.releaseLock();
+  //         readerRef.current = null;
+  //       }
         
-        if (portRef.current.readable) {
-          await portRef.current.close();
-        }
-        portRef.current = null;
+  //       if (portRef.current.readable) {
+  //         await portRef.current.close();
+  //       }
+  //       portRef.current = null;
         
-        toast("Disconnected from device", {
-          action: {
-            label: "Reconnect",
-            onClick: () => connectToDevice(),
-          },
-        });
-      }
-    } catch (error) {
-      console.error("Error during disconnection:", error);
-    } finally {
-      setIsConnected(false);
-      isConnectedRef.current = false;
-      isRecordingRef.current = false;
-      Connection(false);
-    }
-  };
+  //       toast("Disconnected from device", {
+  //         action: {
+  //           label: "Reconnect",
+  //           onClick: () => connectToDevice(),
+  //         },
+  //       });
+  //     }
+  //   } catch (error) {
+  //     console.error("Error during disconnection:", error);
+  //   } finally {
+  //     setIsConnected(false);
+  //     isConnectedRef.current = false;
+  //     isRecordingRef.current = false;
+  //     Connection(false);
+  //   }
+  // };
  
   // Function to read data from a connected device and process it
   const readData = async (): Promise<void> => {
@@ -393,7 +390,6 @@ let previousCounter: number | null = null; // Variable to store the previous cou
     } catch (error) {
       console.error("Error reading from device:", error); // Handle any errors that occur during the read process
     } finally {
-      await disconnectDevice(); // Ensure the device is disconnected when finished
     }
   };
 
