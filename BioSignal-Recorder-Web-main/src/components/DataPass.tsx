@@ -23,7 +23,6 @@ const DataPass = () => {
   };
 
   const dataSteam = useCallback((data: number[]) => {
-
     if (canvasRef.current) {
       canvasRef.current.updateData(data); // Assuming data is the new data to be displayed
     }
@@ -42,7 +41,7 @@ const DataPass = () => {
   return (
     <>
       <Navbar isDisplay={isDisplay} />
-      {isConnected ? (
+     
         <Canvas
         pauseRef={pauseRef}
         Zoom={Zoom}
@@ -51,9 +50,7 @@ const DataPass = () => {
           isDisplay={isDisplay}
           canvasCount={canvasCount} // Pass canvas count
         />
-      ) : (
-        <Steps />
-      )}
+    
       <Connection
       onPauseChange={handlePauseChange}
         dataSteam={dataSteam}
