@@ -36,10 +36,12 @@ const Canvas = forwardRef(
   let previousCounter: number | null = null; // Variable to store the previous counter value for loss detection
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [numChannels, setNumChannels] = useState<number>(canvasCount);
-  const [canvases, setCanvases] = useState<HTMLCanvasElement[]>([]);
-  const [wglPlots, setWglPlots] = useState<WebglPlot[]>([]);
+  // const [canvases, setCanvases] = useState<HTMLCanvasElement[]>([]);
+  // const [wglPlots, setWglPlots] = useState<WebglPlot[]>([]);
   const [lines, setLines] = useState<WebglLine[]>([]);
   const linesRef = useRef<WebglLine[]>([]);
+  const canvases = useRef<HTMLCanvasElement[]>([]);
+  const wglPlots = useRef<WebglPlot[]>([]);
   const [marginBottom, setMarginBottom] = useState(0);
   const fps = 60;
   const samplingRate = 500; // Set the sampling rate in Hz
@@ -56,7 +58,7 @@ const Canvas = forwardRef(
           return 0; // Or any other fallback value you'd like
       }
     }, []);
-  numX=getpoints(selectedBits);
+  numX=2000;
     useEffect(() => {
       setNumChannels(canvasCount);
     }, [canvasCount]);
@@ -119,8 +121,9 @@ const createCanvases = () => {
       }
 
       // Clear the arrays holding canvases, WebGL plots, and lines
-      setCanvases([]);
-      setWglPlots([]);
+      
+      canvases.current = [];
+      wglPlots.current = [];
       linesRef.current = [];
 
   const fixedCanvasWidth = canvasContainerRef.current.clientWidth;
@@ -164,17 +167,25 @@ const createCanvases = () => {
         newCanvases.push(canvas);
 
     const wglp = new WebglPlot(canvas);
-    newWglPlots.push(wglp);
+  
     wglp.gScaleY = Zoom;
     const line = new WebglLine(getRandomColor(i), numX);
     line.lineSpaceX(-1, 2 / numX);
+    newWglPlots.push(wglp);
     wglp.addLine(line);
     newLines.push(line);
+    if (wglp) {
+      console.log(`WebGL plot created for channel ${i}`);
+      newWglPlots.push(wglp);
+    } else {
+      console.error(`Failed to create WebGL plot for channel ${i}`);
+    }
   }
 
   linesRef.current = newLines;
-  setCanvases(newCanvases);
-  setWglPlots(newWglPlots);
+  canvases.current = newCanvases;
+  wglPlots.current =newWglPlots;
+ 
   setLines(newLines);
 };
 
@@ -195,7 +206,7 @@ const createCanvases = () => {
 
   
   const updatePlots = useCallback((data: number[],Zoom:number) => {
-    wglPlots.forEach((wglp, index) => {
+    wglPlots.current.forEach((wglp, index) => {
       if (wglp) {
         try {
           wglp.gScaleY = Zoom; // Adjust this value as needed
@@ -208,17 +219,17 @@ const createCanvases = () => {
     });
     linesRef.current.forEach((line, i) => {
       // Shift the data points efficiently using a single operation
-      const bitsPoints = Math.pow(2, getValue(selectedBits)); // Adjust this according to your ADC resolution
+      const bitsPoints = Math.pow(2,14); // Adjust this according to your ADC resolution
       const yScale = 2 / bitsPoints;
       const chData = (data[i] - bitsPoints / 2) * yScale;
-  
+      console.log(`Channel ${i} data (scaled):`, line);
+
       for (let j = 1; j < line.numPoints; j++) {
         line.setY(j - 1, line.getY(j));
       }
       line.setY(line.numPoints - 1, chData);
     });
-
-  }, [lines,wglPlots]); // Add dependencies here
+  }, [linesRef.current,wglPlots.current]); // Add dependencies here
 
   useEffect(() => {
     createCanvases();
@@ -242,7 +253,7 @@ const createCanvases = () => {
 
     const animate = useCallback(() => {
       if (pauseRef.current) {
-        wglPlots.forEach((wglp) => wglp.update());
+        wglPlots.current.forEach((wglp) => wglp.update());
         requestAnimationFrame(animate);
       }
     }, [wglPlots, pauseRef]);
