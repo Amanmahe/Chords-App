@@ -3,7 +3,7 @@ import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "./ui/button";
 import { SmoothieChart } from "smoothie";
 import { Input } from "./ui/input";
-
+import { listen } from "@tauri-apps/api/event";
 import {
   Cable,
   Circle,
@@ -211,51 +211,49 @@ const Connection: React.FC<ConnectionProps> = ({
       connectToDevice();
     }
   };
+  type Payload = {
+    message: number[];
+};
+let previousCounter: number | null = null; // Variable to store the previous counter value for loss detection
+
 
   const connectToDevice = async () => {
+    // Function to connect to the device
     try {
-      if (portRef.current && portRef.current.readable) {
-        await disconnectDevice();
+      await listen<Payload>("updateSerial", (event: any) => {
+        const counter=event.payload.message[6];
+        if (previousCounter !== null) {
+          // If there was a previous counter value
+          const expectedCounter: number = (previousCounter + 1) % 256; // Calculate the expected counter value
+          if (counter !== expectedCounter) {
+            // Check for data loss by comparing the current counter with the expected counter
+            const missingCount = counter > previousCounter
+            ? counter - expectedCounter
+            : 256 + (counter - expectedCounter); // Handle overflow case when counter wraps
+
+            // Update the missing samples count
+          }
+        }
+        previousCounter = counter; // Update the previous counter with the current counter
+      dataSteam(event.payload.message); // Pass the channel data to the LineData function for further processing
+      if (isRecordingRef.current) {
+        bufferRef.current.push(event.payload.message); // Push the string array to the buffer if recording is on
       }
-      
-      const port = await navigator.serial.requestPort();
-      await port.open({ baudRate: 230400 });
-      Connection(true);
-      setIsConnected(true);
-      onPauseChange(true); // Notify parent about the change
-      setIsDisplay(true);
-      isConnectedRef.current = true;
-      portRef.current = port;
-      
-      toast.success("Connection Successful", {
-        description: (
-          <div className="mt-2 flex flex-col space-y-1">
-            <p>Device: {formatPortInfo(port.getInfo())}</p>
-            <p>Baud Rate: 230400</p>
-          </div>
-        ),
-      });
-      
-      const reader = port.readable?.getReader();
-      readerRef.current = reader;
-      const writer = port.writable?.getWriter();
-      if (writer) {
-         setTimeout(function () {
-          writerRef.current = writer;
-          const message = new TextEncoder().encode("START\n");
-          writerRef.current.write(message);
-        }, 2000);
-      } else {
-        console.error("Writable stream not available");
+      if(isConnected){
+        setIsConnected(false);
+        isConnectedRef.current = false;
+      }else{
+        setIsConnected(true);
       }
-      
-      readData();
-      
-      await navigator.wakeLock.request("screen");
+     
+    });
+      await navigator.wakeLock.request("screen"); // Request the wake lock to keep the screen on
     } catch (error) {
-      await disconnectDevice();
+      // If there is an error during connection, disconnect the device
+      disconnectDevice();
+      isConnectedRef.current = false;
+      setIsConnected(false);
       console.error("Error connecting to device:", error);
-      toast.error("Failed to connect to device.");
     }
   };
   
