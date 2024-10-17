@@ -84,7 +84,7 @@ pub fn auto_detect_arduino() -> Option<String> {
 
 pub fn receive_arduino_data(port_name: &str, app_handle: AppHandle) {
     match serialport::new(port_name, 230400)
-        .timeout(Duration::from_secs(3))
+        .timeout(Duration::from_secs(5))
         .open()
     {
         Ok(mut port) => {
