@@ -1,0 +1,57 @@
+name: Tauri Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+        components: rustfmt
+
+    - name: Install Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 16
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Install Tauri CLI
+      run: npm install -g @tauri-apps/cli
+
+    - name: Build Tauri app
+      run: npm run build
+
+    - name: Package Tauri app
+      run: |
+        if [[ "$RUNNER_OS" == "Linux" ]]; then
+          npm run tauri build -- --target x86_64-unknown-linux-gnu
+        elif [[ "$RUNNER_OS" == "macOS" ]]; then
+          npm run tauri build -- --target universal-apple-darwin
+        elif [[ "$RUNNER_OS" == "Windows" ]]; then
+          npm run tauri build -- --target x86_64-pc-windows-msvc
+        fi
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: tauri-app-${{ matrix.os }}
+        path: src-tauri/target/release/bundle/
